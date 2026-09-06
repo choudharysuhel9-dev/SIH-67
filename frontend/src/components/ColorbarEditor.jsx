@@ -21,8 +21,8 @@ export default function ColorbarEditor({ variableLabel = "Temperature", unit = "
           className="bg-[#12233350] text-[11px] text-[#DCE8F0] border border-[#1B2A3A] rounded px-1.5 py-0.5"
         >
           {Object.keys(PALETTES).map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
+  <option key={p} value={p} style={{ backgroundColor: "#0C1826", color: "#DCE8F0" }}>{p}</option>
+))}
         </select>
       </div>
 
