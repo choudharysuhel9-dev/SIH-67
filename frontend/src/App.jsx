@@ -160,6 +160,15 @@ export default function OceanDashboard() {
             title="Float 2900456 — click for profile"
           />
 
+              {/* Float status legend */} 
+              <div className="absolute top-3 right-3 bg-[#0C1826EE] border border-[#1B2A3A] rounded-md px-3 py-2.5"> <p className="text-[11px] text-[#7C93A8] mb-1.5">Float Status</p>
+               <div className="flex flex-col gap-1"> <div className="flex items-center gap-2"> <span className="w-2 h-2 rounded-full bg-[#4ADE80]" /> <span className="text-[11px] text-[#DCE8F0]">Active</span> </div> 
+               <div className="flex items-center gap-2"> <span className="w-2 h-2 rounded-full bg-[#FBBF24]" /> 
+               <span className="text-[11px] text-[#DCE8F0]">Recent Data</span> </div>
+                <div className="flex items-center gap-2"> <span className="w-2 h-2 rounded-full bg-[#F87171]" /> 
+                <span className="text-[11px] text-[#DCE8F0]">BGC Sensor</span> </div> 
+                </div> 
+                </div>
           {/* Colorbar / legend */}
          <ColorbarEditor variableLabel={activeVar.label} unit={activeVar.unit} />
         </main>
