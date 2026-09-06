@@ -1,15 +1,15 @@
 import { useState, useRef } from "react";
 import {
   Compass,
-  Maximize,
   Layers,
   Crosshair,
-  Navigation,
-  Globe2,
-  Anchor,
   Radio,
   Eye,
-  Info
+  Info,
+  ChevronUp,
+  ChevronDown,
+  SlidersHorizontal,
+  Clock
 } from "lucide-react";
 
 // Real Indian Ocean In-situ Observation Platforms
@@ -101,7 +101,9 @@ export default function ViewportStage({
   timelineComponent,
 }) {
   const [hoveredPlatform, setHoveredPlatform] = useState(null);
-  const [cursorCoords, setCursorCoords] = useState({ lat: "12.45° N", lon: "75.20° E" });
+  const [cursorCoords, setCursorCoords] = useState({ lat: "14.28° N", lon: "68.42° E" });
+  const [showLegendMobile, setShowLegendMobile] = useState(false);
+  const [mobileActiveBottomTab, setMobileActiveBottomTab] = useState("timeline"); // timeline | colorbar | hide
   const containerRef = useRef(null);
 
   // Mouse coordinate calculation across Indian Ocean viewport
@@ -111,7 +113,6 @@ export default function ViewportStage({
     const xRatio = (e.clientX - rect.left) / rect.width;
     const yRatio = (e.clientY - rect.top) / rect.height;
 
-    // Approximate mapping: Lon 50°E to 100°E, Lat 30°N to -10°S
     const lon = (50 + xRatio * 50).toFixed(2);
     const lat = (28 - yRatio * 38).toFixed(2);
     setCursorCoords({
@@ -128,13 +129,12 @@ export default function ViewportStage({
     >
       {/* =========================================================================
           DROP-IN MOUNT POINT FOR 3D TEAMMATE (Three.js / Cesium.js Canvas)
-          Your 3D teammate can mount their Three.js <canvas> directly inside this div.
           ========================================================================= */}
       <div id="three-viewport-mount" className="absolute inset-0 pointer-events-auto">
         {/* Synthetic Bathymetry Grid & Coastline Projection */}
-        <div className="absolute inset-0 opacity-40 bg-[linear-gradient(to_right,#152C441A_1px,transparent_1px),linear-gradient(to_bottom,#152C441A_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+        <div className="absolute inset-0 opacity-40 bg-[linear-gradient(to_right,#152C441A_1px,transparent_1px),linear-gradient(to_bottom,#152C441A_1px,transparent_1px)] bg-[size:3rem_3rem] sm:bg-[size:4rem_4rem]" />
 
-        {/* Indian Coastline & EEZ Boundary Glow */}
+        {/* Indian Coastline & EEZ Boundary SVG */}
         <svg
           viewBox="0 0 1000 700"
           className="w-full h-full object-cover opacity-60 pointer-events-none"
@@ -153,10 +153,9 @@ export default function ViewportStage({
             </filter>
           </defs>
 
-          {/* Regional water glow */}
           <rect x="0" y="0" width="1000" height="700" fill="url(#oceanGlow)" />
 
-          {/* Stylized Indian Subcontinent & Coastline */}
+          {/* Indian Subcontinent */}
           <path
             d="M 330,120 L 370,160 L 410,210 L 440,240 L 460,280 L 490,340 L 510,400 L 525,440 L 530,480 L 510,500 L 490,460 L 460,420 L 430,370 L 400,340 L 380,310 L 340,290 L 320,260 Z"
             fill="#091E33"
@@ -173,7 +172,7 @@ export default function ViewportStage({
             strokeWidth="1.5"
           />
 
-          {/* Andaman & Nicobar Chain */}
+          {/* Andaman & Nicobar */}
           <path
             d="M 770,380 L 773,420 L 776,460 L 780,510"
             stroke="#38BDF8"
@@ -182,7 +181,7 @@ export default function ViewportStage({
             opacity="0.7"
           />
 
-          {/* 200nm Exclusive Economic Zone (EEZ) Boundary */}
+          {/* 200nm EEZ Boundary */}
           {layers.eez !== false && (
             <path
               d="M 280,240 Q 320,330 400,430 Q 480,550 530,580 Q 580,550 630,470 Q 720,390 820,340"
@@ -195,7 +194,7 @@ export default function ViewportStage({
             />
           )}
 
-          {/* Deep Bathymetric Ridge Lines (Ninety East Ridge, Carlsberg Ridge) */}
+          {/* Bathymetric Ridges */}
           {layers.bathymetry !== false && (
             <g stroke="#1A3859" strokeWidth="1" strokeDasharray="2 3" opacity="0.6">
               <path d="M 750,220 L 740,650" />
@@ -204,13 +203,11 @@ export default function ViewportStage({
             </g>
           )}
 
-          {/* Simulated 3D Current Streamlines */}
+          {/* Simulated Currents */}
           {layers.currents !== false && (
             <g stroke="#22D3EE" strokeWidth="1.2" opacity="0.45">
-              {/* Somali Jet & WICC */}
               <path d="M 250,560 Q 330,460 410,400 Q 470,370 510,440" strokeDasharray="5 7" />
               <path d="M 270,580 Q 350,480 430,420 Q 490,390 530,460" strokeDasharray="5 7" />
-              {/* Bay of Bengal Gyre */}
               <path d="M 570,470 Q 660,380 730,410 Q 750,490 670,530 Z" strokeDasharray="4 6" />
             </g>
           )}
@@ -218,57 +215,72 @@ export default function ViewportStage({
       </div>
 
       {/* =========================================================================
-          TOP HUD OVERLAYS (Geographic labels, camera presets, telemetry status)
+          TOP HUD OVERLAYS (Adaptive for Mobile & Desktop)
           ========================================================================= */}
-      <div className="relative z-10 flex items-start justify-between p-4 pointer-events-none">
-        {/* Region & Telemetry Info */}
-        <div className="bg-[#091524]/85 backdrop-blur-md border border-[#1B3552] rounded-xl p-3 pointer-events-auto shadow-lg">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse" />
-            <span className="text-xs font-semibold text-white tracking-wide">
+      <div className="relative z-10 flex items-start justify-between p-2.5 sm:p-4 pointer-events-none gap-2">
+        {/* Region & Telemetry Info (Responsive Compact) */}
+        <div className="bg-[#091524]/90 backdrop-blur-md border border-[#1B3552] rounded-xl p-2 sm:p-3 pointer-events-auto shadow-lg max-w-[200px] sm:max-w-xs">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse shrink-0" />
+            <span className="text-[11px] sm:text-xs font-semibold text-white truncate">
               Indian Ocean Basin
             </span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#13283E] text-[#38BDF8] font-mono">
+            <span className="hidden xs:inline text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded bg-[#13283E] text-[#38BDF8] font-mono">
               EEZ Active
             </span>
           </div>
-          <p className="text-[11px] text-[#7C98B3] mt-0.5">
-            Arabian Sea • Bay of Bengal • Equatorial Channel
-          </p>
-          <div className="flex items-center gap-3 mt-2 text-[10px] font-mono text-[#587999] border-t border-[#162C44] pt-1.5">
-            <span>Cursor: <strong className="text-[#38BDF8]">{cursorCoords.lat}, {cursorCoords.lon}</strong></span>
-            <span>Slice Depth: <strong className="text-[#F59E0B]">{depth} m</strong></span>
+          <div className="flex items-center gap-2 mt-1 sm:mt-1.5 text-[9px] sm:text-[10px] font-mono text-[#7C98B3] border-t border-[#162C44] pt-1">
+            <span className="truncate">Slice: <strong className="text-[#F59E0B]">{depth}m</strong></span>
+            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:inline text-[#38BDF8]">{cursorCoords.lat}, {cursorCoords.lon}</span>
           </div>
         </div>
 
-        {/* Float Status Legend */}
-        <div className="bg-[#091524]/85 backdrop-blur-md border border-[#1B3552] rounded-xl p-3 pointer-events-auto shadow-lg">
-          <p className="text-[10px] text-[#7C98B3] uppercase tracking-wider mb-2 font-medium">
-            In-Situ Platforms ({INSTRUMENTS.length})
-          </p>
-          <div className="flex flex-col gap-1.5 text-[11px]">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#34D399] shadow-[0_0_8px_#34D399]" />
-              <span className="text-[#DCE8F0]">Active Argo Float</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FB7185] shadow-[0_0_8px_#FB7185]" />
-              <span className="text-[#DCE8F0]">BGC-Argo (Bio/O₂)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8] shadow-[0_0_8px_#38BDF8]" />
-              <span className="text-[#DCE8F0]">Underwater Glider</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FBBF24] shadow-[0_0_8px_#FBBF24]" />
-              <span className="text-[#DCE8F0]">OMNI Moored Buoy</span>
+        {/* Float Status Legend (Collapsible on Mobile) */}
+        <div className="pointer-events-auto flex flex-col items-end">
+          {/* Mobile Toggle Button */}
+          <button
+            onClick={() => setShowLegendMobile(!showLegendMobile)}
+            className="sm:hidden flex items-center gap-1 px-2 py-1 rounded-lg bg-[#091524]/90 border border-[#1B3552] text-[10px] text-[#7C98B3] hover:text-white shadow-md"
+          >
+            <Info className="w-3 h-3 text-[#38BDF8]" />
+            <span>Legend</span>
+            {showLegendMobile ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+
+          {/* Desktop Legend & Mobile Expanded View */}
+          <div
+            className={`${
+              showLegendMobile ? "flex mt-1.5" : "hidden"
+            } sm:flex flex-col bg-[#091524]/90 backdrop-blur-md border border-[#1B3552] rounded-xl p-2.5 sm:p-3 shadow-lg text-[10px] sm:text-[11px] animate-in fade-in duration-150`}
+          >
+            <p className="text-[9px] sm:text-[10px] text-[#7C98B3] uppercase tracking-wider mb-1.5 font-medium">
+              In-Situ Platforms ({INSTRUMENTS.length})
+            </p>
+            <div className="flex flex-col gap-1 sm:gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#34D399] shadow-[0_0_8px_#34D399]" />
+                <span className="text-[#DCE8F0]">Active Argo Float</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#FB7185] shadow-[0_0_8px_#FB7185]" />
+                <span className="text-[#DCE8F0]">BGC-Argo (Bio/O₂)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#38BDF8] shadow-[0_0_8px_#38BDF8]" />
+                <span className="text-[#DCE8F0]">Underwater Glider</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#FBBF24] shadow-[0_0_8px_#FBBF24]" />
+                <span className="text-[#DCE8F0]">OMNI Moored Buoy</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* =========================================================================
-          INTERACTIVE IN-SITU BEACON PINS (Geospatially Positioned)
+          INTERACTIVE IN-SITU BEACON PINS (Large Finger-Friendly Hit Targets)
           ========================================================================= */}
       <div className="absolute inset-0 pointer-events-none">
         {INSTRUMENTS.map((inst) => {
@@ -286,7 +298,7 @@ export default function ViewportStage({
             <div
               key={inst.id}
               style={{ top: `${inst.yPct}%`, left: `${inst.xPct}%` }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-20 group"
+              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-20"
             >
               {/* Pulsing Radar Ring */}
               <div
@@ -295,42 +307,42 @@ export default function ViewportStage({
                 }`}
               />
 
-              {/* Beacon Button */}
+              {/* Beacon Button (With generous touch padding for mobile fingers) */}
               <button
                 onClick={() => onSelectInstrument(inst)}
                 onMouseEnter={() => setHoveredPlatform(inst)}
                 onMouseLeave={() => setHoveredPlatform(null)}
-                className={`relative w-4 h-4 rounded-full ${colorClass} hover:scale-150 transition-all cursor-pointer flex items-center justify-center border-2 border-[#091524]`}
-                title={`${inst.name} — Click to inspect profile`}
+                className="p-2 -m-2 flex items-center justify-center cursor-pointer group"
+                title={`${inst.name} — Tap to inspect`}
               >
-                <span className="w-1.5 h-1.5 bg-white rounded-full opacity-90" />
+                <div
+                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full ${colorClass} group-hover:scale-150 transition-all flex items-center justify-center border-2 border-[#091524]`}
+                >
+                  <span className="w-1 h-1 bg-white rounded-full opacity-90" />
+                </div>
               </button>
 
-              {/* Hover Tooltip Card */}
+              {/* Hover/Tap Tooltip Card */}
               {isHovered && (
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-52 p-2.5 rounded-xl bg-[#091524]/95 backdrop-blur-md border border-[#1E3E61] shadow-2xl z-30 pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-150">
-                  <div className="flex items-center justify-between border-b border-[#18314C] pb-1.5">
-                    <span className="text-xs font-semibold text-white truncate">{inst.name}</span>
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-48 sm:w-52 p-2 sm:p-2.5 rounded-xl bg-[#091524]/95 backdrop-blur-md border border-[#1E3E61] shadow-2xl z-30 pointer-events-none animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between border-b border-[#18314C] pb-1">
+                    <span className="text-[11px] sm:text-xs font-semibold text-white truncate">{inst.name}</span>
                     <span className="text-[9px] font-mono px-1 rounded bg-[#132A42] text-[#38BDF8]">
                       {inst.type}
                     </span>
                   </div>
-                  <div className="mt-1.5 space-y-0.5 text-[11px] text-[#8EA7BF]">
+                  <div className="mt-1 space-y-0.5 text-[10px] sm:text-[11px] text-[#8EA7BF]">
                     <div className="flex justify-between">
                       <span>Coordinates:</span>
-                      <strong className="text-white font-mono">{inst.lat}, {inst.lon}</strong>
+                      <strong className="text-white font-mono">{inst.lat}</strong>
                     </div>
                     <div className="flex justify-between">
                       <span>SST:</span>
                       <strong className="text-[#F59E0B] font-mono">{inst.sst} °C</strong>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Salinity:</span>
-                      <strong className="text-[#34D399] font-mono">{inst.salinity} PSU</strong>
-                    </div>
                   </div>
-                  <div className="mt-2 pt-1 border-t border-[#18314C] text-[10px] text-[#38BDF8] text-center font-medium">
-                    Click to inspect vs ROMS Model →
+                  <div className="mt-1.5 pt-1 border-t border-[#18314C] text-[9px] sm:text-[10px] text-[#38BDF8] text-center font-medium">
+                    Tap to inspect vs Model →
                   </div>
                 </div>
               )}
@@ -340,17 +352,59 @@ export default function ViewportStage({
       </div>
 
       {/* =========================================================================
-          FLOATING COLORBAR & TIMELINE CONTROLS DOCK
+          BOTTOM DOCK (Smart Responsive: Desktop side-by-side, Mobile Tabs)
           ========================================================================= */}
-      <div className="relative z-10 flex flex-col sm:flex-row items-end sm:items-center justify-between p-4 gap-3 pointer-events-none">
-        {/* Floating Colorbar Editor */}
-        <div className="pointer-events-auto">
-          {colorbarComponent}
+      <div className="relative z-10 p-2 sm:p-4 pointer-events-none flex flex-col gap-2">
+        {/* Mobile Dock Switcher Tabs */}
+        <div className="sm:hidden flex items-center justify-center gap-1.5 pointer-events-auto">
+          <button
+            onClick={() =>
+              setMobileActiveBottomTab(mobileActiveBottomTab === "timeline" ? "hide" : "timeline")
+            }
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium border shadow-lg transition-all ${
+              mobileActiveBottomTab === "timeline"
+                ? "bg-[#0284C7] text-white border-[#38BDF8]"
+                : "bg-[#091524]/90 text-[#7C98B3] border-[#1B3552]"
+            }`}
+          >
+            <Clock className="w-3 h-3" />
+            <span>4D Timeline</span>
+          </button>
+
+          <button
+            onClick={() =>
+              setMobileActiveBottomTab(mobileActiveBottomTab === "colorbar" ? "hide" : "colorbar")
+            }
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium border shadow-lg transition-all ${
+              mobileActiveBottomTab === "colorbar"
+                ? "bg-[#0284C7] text-white border-[#38BDF8]"
+                : "bg-[#091524]/90 text-[#7C98B3] border-[#1B3552]"
+            }`}
+          >
+            <SlidersHorizontal className="w-3 h-3" />
+            <span>Colorbar</span>
+          </button>
         </div>
 
-        {/* Floating 4D Timeline Scrubber */}
-        <div className="pointer-events-auto w-full sm:w-auto">
-          {timelineComponent}
+        {/* Elements Container: On desktop show both side-by-side; on mobile show active tab */}
+        <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-2.5 sm:gap-3">
+          {/* Colorbar */}
+          <div
+            className={`pointer-events-auto w-full sm:w-auto ${
+              mobileActiveBottomTab === "colorbar" ? "block" : "hidden sm:block"
+            }`}
+          >
+            {colorbarComponent}
+          </div>
+
+          {/* 4D Timeline */}
+          <div
+            className={`pointer-events-auto w-full sm:w-auto flex-1 max-w-2xl ${
+              mobileActiveBottomTab === "timeline" ? "block" : "hidden sm:block"
+            }`}
+          >
+            {timelineComponent}
+          </div>
         </div>
       </div>
     </div>
