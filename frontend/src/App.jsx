@@ -28,6 +28,7 @@ export default function OceanDashboard() {
   const [showProfile, setShowProfile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [showGlobeMobile, setShowGlobeMobile] = useState(false);
 
   const activeVar = VARIABLES.find((v) => v.id === variable);
 
@@ -54,7 +55,7 @@ export default function OceanDashboard() {
 
 
   return (
-    <div className="w-full h-full min-h-[640px] bg-[#0A1420] text-[#DCE8F0] flex flex-col font-sans">
+    <div className="w-full  h-screen bg-[#0A1420] text-[#DCE8F0] flex flex-col font-sans">
       {/* Navbar */}
       <header className="flex items-center justify-between px-5 py-3 border-b border-[#1B2A3A] bg-[#0C1826]">
         <div className="flex items-center gap-2.5">
@@ -67,9 +68,9 @@ export default function OceanDashboard() {
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0">
+     <div className="flex flex-col lg:flex-row flex-1 min-h-0">
         {/* Sidebar controls */}
-        <aside className="w-64 shrink-0 border-r border-[#1B2A3A] bg-[#0C1826] p-4 flex flex-col gap-6 overflow-y-auto">
+       <aside className={`${showGlobeMobile ? "hidden" : "flex"} lg:flex w-full lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-[#1B2A3A] bg-[#0C1826] p-5 lg:p-4 flex-col gap-6 overflow-y-auto`}>
           <div>
             <p className="text-xs text-[#7C93A8] mb-2">Variable</p>
             <div className="flex flex-col gap-1.5">
@@ -137,10 +138,12 @@ export default function OceanDashboard() {
           >
             Simulate float click →
           </button>
+          <button onClick={() => setShowGlobeMobile(true)} className="lg:hidden text-sm px-3 py-2 rounded-md bg-[#1E3F58] hover:bg-[#26507A] text-white border border-[#2C5A73] transition-colors" > Open 3D viewport → </button>
         </aside>
 
         {/* Main viewport */}
-        <main className="flex-1 relative bg-[radial-gradient(circle_at_50%_40%,#0F2438,#060D16)]">
+      <main className={ showGlobeMobile ? "fixed inset-0 z-30 bg-[radial-gradient(circle_at_50%_40%,#0F2438,#060D16)] lg:static lg:z-auto lg:flex-1 lg:relative" : "hidden lg:flex lg:flex-1 lg:relative bg-[radial-gradient(circle_at_50%_40%,#0F2438,#060D16)]" } >
+         <button onClick={() => setShowGlobeMobile(false)} className="lg:hidden absolute top-3 left-3 z-20 text-xs px-2.5 py-1.5 rounded-md bg-[#0C1826EE] border border-[#1B2A3A] text-[#DCE8F0]" > ← Back to controls </button>
           <div className="absolute inset-0 flex items-center justify-center text-[#3D5A70] text-sm pointer-events-none">
   3D globe / viewport renders here (Three.js or Cesium.js)
 </div>

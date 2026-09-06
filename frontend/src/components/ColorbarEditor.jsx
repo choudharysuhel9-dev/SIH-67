@@ -12,7 +12,7 @@ export default function ColorbarEditor({ variableLabel = "Temperature", unit = "
   const [max, setMax] = useState(30);
 
   return (
-    <div className="bg-[#0C1826EE] border border-[#1B2A3A] rounded-md px-3 py-2.5 w-56">
+    <div className="bg-[#0C1826EE] border border-[#1B2A3A] rounded-md px-3 py-2.5 w-56 max-w-[calc(100vw-2.5rem)] ">
       <div className="flex justify-between items-center mb-2">
         <span className="text-[11px] text-[#7C93A8]">{variableLabel}</span>
         <select
