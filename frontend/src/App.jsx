@@ -1,6 +1,8 @@
+import ColorbarEditor from './components/ColorbarEditor';
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Thermometer, Droplets, Waves, X, Loader2 } from "lucide-react";
+import { Thermometer, Droplets, Waves, X, Loader2, AlertTriangle } from "lucide-react";
+
 
 // Dummy profile data for the click-a-float chart
 const profileData = [
@@ -25,15 +27,31 @@ export default function OceanDashboard() {
   const [timeStep, setTimeStep] = useState(3);
   const [showProfile, setShowProfile] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const activeVar = VARIABLES.find((v) => v.id === variable);
 
+  
   function handleFloatClick() {
     setLoading(true);
+    setError(false);
     setShowProfile(true);
-    // simulate a fetch delay so loading state is visible
-    setTimeout(() => setLoading(false), 900);
+    // simulate a fetch delay; randomly fails ~30% of the time so you can demo the error state too
+    setTimeout(() => {
+      setLoading(false);
+      if (Math.random() < 0.3) setError(true);
+    }, 900);
   }
+
+  function handleRetry() {
+    setLoading(true);
+    setError(false);
+    setTimeout(() => {
+      setLoading(false);
+      // retry always succeeds for the demo
+    }, 700);
+  }
+
 
   return (
     <div className="w-full h-full min-h-[640px] bg-[#0A1420] text-[#DCE8F0] flex flex-col font-sans">
@@ -123,9 +141,9 @@ export default function OceanDashboard() {
 
         {/* Main viewport */}
         <main className="flex-1 relative bg-[radial-gradient(circle_at_50%_40%,#0F2438,#060D16)]">
-          <div className="absolute inset-0 flex items-center justify-center text-[#3D5A70] text-sm">
-            3D globe / viewport renders here (Three.js or Cesium.js)
-          </div>
+          <div className="absolute inset-0 flex items-center justify-center text-[#3D5A70] text-sm pointer-events-none">
+  3D globe / viewport renders here (Three.js or Cesium.js)
+</div>
 
           {/* dummy float markers */}
           <button
@@ -140,17 +158,7 @@ export default function OceanDashboard() {
           />
 
           {/* Colorbar / legend */}
-          <div className="absolute bottom-5 left-5 bg-[#0C1826EE] border border-[#1B2A3A] rounded-md px-3 py-2.5 w-56">
-            <div className="flex justify-between text-[11px] text-[#7C93A8] mb-1.5">
-              <span>{activeVar.label}</span>
-              <span>{activeVar.unit}</span>
-            </div>
-            <div className="h-2.5 rounded-full bg-gradient-to-r from-[#1E3A8A] via-[#22D3EE] to-[#F97316]" />
-            <div className="flex justify-between text-[10px] text-[#5A7488] mt-1">
-              <span>Low</span>
-              <span>High</span>
-            </div>
-          </div>
+         <ColorbarEditor variableLabel={activeVar.label} unit={activeVar.unit} />
         </main>
       </div>
 
@@ -173,7 +181,19 @@ export default function OceanDashboard() {
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Loading ocean data…
               </div>
-            ) : (
+            ) : error ? (
+  <div className="h-52 flex flex-col items-center justify-center gap-3 text-sm text-center px-4">
+    <AlertTriangle className="w-5 h-5 text-[#F87171]" />
+    <p className="text-[#F87171]">Failed to load profile data</p>
+    <p className="text-[#7C93A8] text-xs">The float may be offline or the connection timed out.</p>
+    <button
+      onClick={handleRetry}
+      className="text-sm px-3 py-1.5 rounded-md bg-[#173247] hover:bg-[#1E3F58] text-[#7FDDF0] border border-[#2C5A73] transition-colors"
+    >
+      Retry
+    </button>
+  </div>
+) : (
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={profileData}>
                   <CartesianGrid stroke="#1B2A3A" />
