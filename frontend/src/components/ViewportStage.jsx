@@ -99,6 +99,8 @@ export default function ViewportStage({
   depth = 50,
   timeStep = 3,
   layers = {},
+  verticalExaggeration = 5,
+  layerOpacity = 85,
   onSelectInstrument,
   colorbarComponent,
   timelineComponent,
@@ -109,6 +111,17 @@ export default function ViewportStage({
   const [mobileActiveBottomTab, setMobileActiveBottomTab] = useState("timeline"); // timeline | colorbar | hide
   const [isSpaceTheatreMode, setIsSpaceTheatreMode] = useState(false);
   const containerRef = useRef(null);
+
+  // Expose real-time parameters for teammate's Cesium/Three.js canvas
+  useEffect(() => {
+    window.ocean3dSettings = {
+      verticalExaggeration,
+      layerOpacity,
+      depth,
+      variable,
+      timeStep,
+    };
+  }, [verticalExaggeration, layerOpacity, depth, variable, timeStep]);
 
   // Press ESC to exit Space Mode
   useEffect(() => {
@@ -249,7 +262,7 @@ export default function ViewportStage({
           ========================================================================= */}
       <div className="relative z-10 flex items-start justify-between p-2.5 sm:p-4 pointer-events-none gap-2">
         {/* Region & Telemetry Info (Responsive Compact) */}
-        <div className="bg-[#091524]/90 backdrop-blur-md border border-[#1B3552] rounded-xl p-2 sm:p-3 pointer-events-auto shadow-lg max-w-[200px] sm:max-w-xs">
+        <div className="bg-[#091524]/90 backdrop-blur-md border border-[#1B3552] rounded-xl p-2 sm:p-3 pointer-events-auto shadow-lg max-w-[240px] sm:max-w-sm">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse shrink-0" />
             <span className="text-[11px] sm:text-xs font-semibold text-white truncate">
@@ -259,8 +272,10 @@ export default function ViewportStage({
               EEZ Active
             </span>
           </div>
-          <div className="flex items-center gap-2 mt-1 sm:mt-1.5 text-[9px] sm:text-[10px] font-mono text-[#7C98B3] border-t border-[#162C44] pt-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[9px] sm:text-[10px] font-mono text-[#7C98B3] border-t border-[#162C44] pt-1">
             <span className="truncate">Slice: <strong className="text-[#F59E0B]">{depth}m</strong></span>
+            <span>•</span>
+            <span className="text-[#34D399] font-medium">{verticalExaggeration}x</span>
             <span className="hidden sm:inline">•</span>
             <span className="hidden sm:inline text-[#38BDF8]">{cursorCoords.lat}, {cursorCoords.lon}</span>
           </div>

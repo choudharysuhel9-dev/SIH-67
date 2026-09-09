@@ -161,6 +161,20 @@ export default function App() {
     setIsMissionMenuOpen(false);
   }
 
+  function handleLaunchVisualizer(targetMissionId) {
+    if (targetMissionId) {
+      const selected = MISSION_PROFILES.find((m) => m.id === targetMissionId);
+      if (selected && selected.preset) {
+        setActiveMissionId(targetMissionId);
+        setVariable(selected.preset.variable);
+        setDepth(selected.preset.depth);
+        setLayers(selected.preset.layers);
+      }
+    }
+    // Instant, consistent transition into 3D visualizer
+    setActiveTab("visualizer");
+  }
+
   function handleLayerToggle(key) {
     setLayers((prev) => ({ ...prev, [key]: !prev[key] }));
   }
@@ -400,24 +414,27 @@ export default function App() {
           {activeTab === "home" && (
             <HomeView
               onNavigate={(tab) => setActiveTab(tab)}
+              onLaunchVisualizer={handleLaunchVisualizer}
               onSelectMission={handleSelectMission}
             />
           )}
 
           {activeTab === "visualizer" && (
-            <VisualizerView
-              variable={variable}
-              setVariable={setVariable}
-              depth={depth}
-              setDepth={setDepth}
-              timeStep={timeStep}
-              setTimeStep={setTimeStep}
-              layers={layers}
-              handleLayerToggle={handleLayerToggle}
-              onSelectInstrument={(inst) => setSelectedInstrument(inst)}
-              activeMission={activeMission}
-              onSelectMission={handleSelectMission}
-            />
+            <div className="flex-1 w-full h-full flex overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+              <VisualizerView
+                variable={variable}
+                setVariable={setVariable}
+                depth={depth}
+                setDepth={setDepth}
+                timeStep={timeStep}
+                setTimeStep={setTimeStep}
+                layers={layers}
+                handleLayerToggle={handleLayerToggle}
+                onSelectInstrument={(inst) => setSelectedInstrument(inst)}
+                activeMission={activeMission}
+                onSelectMission={handleSelectMission}
+              />
+            </div>
           )}
 
           {activeTab === "analytics" && <FloatAnalyticsView />}

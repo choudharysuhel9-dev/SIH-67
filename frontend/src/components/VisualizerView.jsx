@@ -21,6 +21,8 @@ export default function VisualizerView({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [dismissedAlertMission, setDismissedAlertMission] = useState(null);
+  const [verticalExaggeration, setVerticalExaggeration] = useState(5);
+  const [layerOpacity, setLayerOpacity] = useState(85);
 
   const isAlertVisible =
     activeMission?.alertInfo && dismissedAlertMission !== activeMission.id;
@@ -222,6 +224,61 @@ export default function VisualizerView({
           ))}
         </div>
       </div>
+
+      {/* 3D Volumetric & Rendering Controls */}
+      <div className="p-3 rounded-xl bg-[#071321] border border-[#142A42] space-y-3">
+        {/* Vertical Exaggeration Slider (1x - 10x) */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-[#8EA7BF] uppercase tracking-wider">
+              Vertical Exaggeration
+            </span>
+            <span className="text-[11px] font-mono text-[#38BDF8] font-bold">
+              {verticalExaggeration}x
+            </span>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={10}
+            step={0.5}
+            value={verticalExaggeration}
+            onChange={(e) => setVerticalExaggeration(Number(e.target.value))}
+            className="w-full accent-[#38BDF8] h-1.5 bg-[#142A42] rounded-lg cursor-pointer"
+          />
+          <div className="flex justify-between text-[9px] font-mono text-[#587591]">
+            <span>1x (True Scale)</span>
+            <span>5x (Standard)</span>
+            <span>10x (High Relief)</span>
+          </div>
+        </div>
+
+        {/* Layer Opacity Slider (20% - 100%) */}
+        <div className="space-y-1 pt-2 border-t border-[#12273D]">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-[#8EA7BF] uppercase tracking-wider">
+              Layer Opacity
+            </span>
+            <span className="text-[11px] font-mono text-[#34D399] font-bold">
+              {layerOpacity}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={20}
+            max={100}
+            step={5}
+            value={layerOpacity}
+            onChange={(e) => setLayerOpacity(Number(e.target.value))}
+            className="w-full accent-[#34D399] h-1.5 bg-[#142A42] rounded-lg cursor-pointer"
+          />
+          <div className="flex justify-between text-[9px] font-mono text-[#587591]">
+            <span>20% (Subtle)</span>
+            <span>85% (Optimal)</span>
+            <span>100% (Solid)</span>
+          </div>
+        </div>
+      </div>
     </>
   );
 
@@ -329,6 +386,8 @@ export default function VisualizerView({
           depth={depth}
           timeStep={timeStep}
           layers={layers}
+          verticalExaggeration={verticalExaggeration}
+          layerOpacity={layerOpacity}
           onSelectInstrument={onSelectInstrument}
           colorbarComponent={
             <ColorbarEditor
