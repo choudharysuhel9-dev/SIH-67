@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Thermometer,
   Droplets,
@@ -6,21 +6,59 @@ import {
   Leaf,
   ArrowUpRight,
   Wind,
-  GraduationCap,
-  Database,
-  Radio,
+  Globe2,
+  BarChart2,
+  Bot,
+  UploadCloud,
+  BookOpen,
   Menu,
-  X
+  X,
+  ChevronDown,
+  Home
 } from "lucide-react";
 
-import ColorbarEditor from "./components/ColorbarEditor";
-import TimelinePlayer from "./components/TimelinePlayer";
+import HomeView from "./components/HomeView";
+import VisualizerView from "./components/VisualizerView";
+import FloatAnalyticsView from "./components/FloatAnalyticsView";
+import OceanAIAssistant from "./components/OceanAIAssistant";
+import NetCDFUploadView from "./components/NetCDFUploadView";
+import GlossaryOutreachView from "./components/GlossaryOutreachView";
 import InstrumentInspector from "./components/InstrumentInspector";
-import OutreachStoryModal from "./components/OutreachStoryModal";
-import NetCDFIngestModal from "./components/NetCDFIngestModal";
-import ViewportStage, { INSTRUMENTS } from "./components/ViewportStage";
+import { INSTRUMENTS } from "./components/ViewportStage";
+import { MISSION_PROFILES } from "./data/missionProfiles";
 
-// Comprehensive Ocean Variables
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("View Render Error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex-1 p-6 text-red-400 bg-[#0C1B2E] m-4 rounded-2xl border border-red-500/40 flex flex-col gap-3">
+          <h3 className="text-base font-bold text-white">An error occurred while displaying this view:</h3>
+          <p className="text-xs text-red-300 font-mono bg-black/40 p-3 rounded-lg border border-red-900/50">
+            {this.state.error?.message || String(this.state.error)}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="w-fit text-xs px-3 py-1.5 rounded-lg bg-[#0284C7] text-white hover:bg-[#0369A1]"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export const OCEAN_VARIABLES = [
   {
     id: "temp",
@@ -84,12 +122,18 @@ export const OCEAN_VARIABLES = [
   },
 ];
 
-export default function OceanDashboard() {
+export default function App() {
+  // Top Navbar Active Tab: "home" | "visualizer" | "analytics" | "assistant" | "uploads" | "glossary"
+  const [activeTab, setActiveTab] = useState("home");
+
+  // Operational Mission Profile State (Disaster / Role presets)
+  const [activeMissionId, setActiveMissionId] = useState("cyclone");
+  const [isMissionMenuOpen, setIsMissionMenuOpen] = useState(false);
+
+  // Shared visualizer state
   const [variable, setVariable] = useState("temp");
   const [depth, setDepth] = useState(50);
   const [timeStep, setTimeStep] = useState(3);
-  const [verticalExaggeration, setVerticalExaggeration] = useState(3);
-
   const [layers, setLayers] = useState({
     eez: true,
     bathymetry: true,
@@ -98,345 +142,298 @@ export default function OceanDashboard() {
   });
 
   const [selectedInstrument, setSelectedInstrument] = useState(null);
-  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
-  const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
-  const activeVar = OCEAN_VARIABLES.find((v) => v.id === variable) || OCEAN_VARIABLES[0];
+  const activeMission =
+    MISSION_PROFILES.find((m) => m.id === activeMissionId) || MISSION_PROFILES[0];
+  const ActiveMissionIcon = activeMission.icon;
 
-  function getDepthZoneLabel(m) {
-    if (m <= 200) return { name: "Epipelagic Zone (Sunlight Layer)", badge: "Surface / MLD", color: "text-[#38BDF8]" };
-    if (m <= 1000) return { name: "Mesopelagic Zone (Twilight Layer)", badge: "Thermocline / OMZ", color: "text-[#F59E0B]" };
-    return { name: "Bathypelagic Zone (Midnight Abyss)", badge: "Deep Ocean", color: "text-[#A855F7]" };
+  function handleSelectMission(missionId) {
+    const selected = MISSION_PROFILES.find((m) => m.id === missionId);
+    if (!selected) return;
+    setActiveMissionId(missionId);
+    if (selected.preset) {
+      setVariable(selected.preset.variable);
+      setDepth(selected.preset.depth);
+      setLayers(selected.preset.layers);
+    }
+    setActiveTab("visualizer");
+    setIsMissionMenuOpen(false);
   }
-
-  const depthZone = getDepthZoneLabel(depth);
 
   function handleLayerToggle(key) {
     setLayers((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
-  function handleApplyStorySetting({ depth: newDepth, variable: newVar }) {
-    if (newDepth !== undefined) setDepth(newDepth);
-    if (newVar !== undefined) setVariable(newVar);
-  }
+  const NAV_TABS = [
+    { id: "home", label: "Home", icon: Home },
+    { id: "visualizer", label: "3D Visualizer", icon: Globe2 },
+    { id: "analytics", label: "Float Analytics", icon: BarChart2 },
+    { id: "assistant", label: "Ocean AI Assistant", icon: Bot },
+    { id: "uploads", label: "NetCDF Uploads", icon: UploadCloud },
+    { id: "glossary", label: "Glossary & Science", icon: BookOpen },
+  ];
 
   return (
     <div className="w-full h-screen bg-[#071019] text-[#DCE8F0] flex flex-col font-sans overflow-hidden select-none">
       {/* =========================================================================
-          TOP COMMAND NAVBAR (Responsive: Compact on Mobile)
+          CLEAN SPACIOUS NAVBAR (FloatChat Style)
           ========================================================================= */}
-      <header className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-2.5 border-b border-[#172E47] bg-[#0A1828]/95 backdrop-blur-md z-30 shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Mobile Menu Hamburger */}
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="lg:hidden p-1.5 rounded-lg bg-[#102336] text-[#7C98B3] hover:text-white"
-            title="Open Controls Menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          {/* INCOIS Logo & Title */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="p-1 sm:p-1.5 rounded-lg bg-[#0284C7]/20 border border-[#0284C7]/40 text-[#38BDF8]">
-              <Waves className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-[#172E47] bg-[#0A1828]/95 backdrop-blur-md z-30 shrink-0">
+        {/* Brand Logo */}
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-xl bg-[#0284C7]/20 border border-[#0284C7]/40 text-[#38BDF8]">
+            <Waves className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold tracking-tight text-base sm:text-lg text-white">
+                INCOIS Ocean 3D
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0284C7]/20 text-[#38BDF8] border border-[#0284C7]/30 hidden sm:inline">
+                MoES Govt of India
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold tracking-tight text-xs sm:text-base text-white truncate">
-                  INCOIS Ocean 3D
-                </span>
-                <span className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#0284C7]/20 text-[#38BDF8] border border-[#0284C7]/30">
-                  MoES
-                </span>
-              </div>
-              <p className="hidden md:block text-[11px] text-[#6E8FA9]">
-                Numerical Ocean Model & In-Situ Observation Platform
-              </p>
-            </div>
+            <p className="text-[10px] text-[#6E8FA9] hidden md:block">
+              Integrated Numerical Ocean Model & Observation Platform
+            </p>
           </div>
         </div>
 
-        {/* Center Live Telemetry (Desktop Only) */}
-        <div className="hidden lg:flex items-center gap-3 text-xs font-mono text-[#7C98B3] bg-[#071321] px-3 py-1.5 rounded-lg border border-[#142A42]">
-          <div className="flex items-center gap-1.5">
+        {/* Desktop Navigation Tabs */}
+        <nav className="hidden lg:flex items-center gap-1.5 bg-[#071321] p-1 rounded-2xl border border-[#142A42]">
+          {NAV_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                  active
+                    ? "bg-[#0284C7] text-white shadow-md font-semibold"
+                    : "text-[#7C98B3] hover:text-white hover:bg-[#0E2034]"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Header Right Actions: Mission Profile Selector + Live Status Badge */}
+        <div className="flex items-center gap-2.5">
+          {/* Operational Mission Profile Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsMissionMenuOpen((prev) => !prev)}
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all shadow-sm"
+              style={{
+                backgroundColor: `${activeMission.color}18`,
+                borderColor: `${activeMission.color}50`,
+                color: activeMission.color,
+              }}
+              title="Click to switch time-critical operational mission profile"
+            >
+              <ActiveMissionIcon className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xl:inline text-[#8EA7BF] text-[11px] font-normal">Mission:</span>
+              <span className="font-semibold text-white truncate max-w-[120px] sm:max-w-none">
+                {activeMission.shortLabel}
+              </span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 opacity-70 transition-transform duration-150 ${
+                  isMissionMenuOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Mission Dropdown Menu */}
+            {isMissionMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsMissionMenuOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-80 bg-[#0A1828] border border-[#1B3857] rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-2.5 py-1.5 border-b border-[#142A42] mb-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#38BDF8]">
+                        Operational Mission Profiles
+                      </span>
+                      <span className="text-[9px] text-[#6E8FA9] font-mono">1-Click Presets</span>
+                    </div>
+                    <p className="text-[10px] text-[#7C98B3] mt-0.5">
+                      Auto-configures parameters for time-critical disaster and maritime operations
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    {MISSION_PROFILES.map((profile) => {
+                      const ProfileIcon = profile.icon;
+                      const isSelected = profile.id === activeMissionId;
+                      return (
+                        <button
+                          key={profile.id}
+                          onClick={() => handleSelectMission(profile.id)}
+                          className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all ${
+                            isSelected
+                              ? "bg-[#132B44] border border-[#23507D]"
+                              : "hover:bg-[#0E2034] border border-transparent"
+                          }`}
+                        >
+                          <div
+                            className="p-1.5 rounded-lg shrink-0 mt-0.5"
+                            style={{
+                              backgroundColor: `${profile.color}20`,
+                              color: profile.color,
+                            }}
+                          >
+                            <ProfileIcon className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-white">
+                                {profile.label}
+                              </span>
+                              {isSelected && (
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#0284C7]/30 text-[#38BDF8] font-mono font-bold">
+                                  ACTIVE
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-[#7C98B3] mt-0.5 line-clamp-2">
+                              {profile.description}
+                            </p>
+                            <span className="inline-block mt-1 text-[9px] font-mono text-[#5A7995]">
+                              Target: {profile.targetUser}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-xs font-mono bg-[#071321] px-3 py-1.5 rounded-xl border border-[#142A42]">
             <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse" />
-            <span className="text-[#DCE8F0]">ROMS 0.1° Live</span>
+            <span className="text-[#34D399]">System Online</span>
           </div>
-          <span className="text-[#2B4B6E]">•</span>
-          <span>Indian EEZ: 2.37M km²</span>
-        </div>
 
-        {/* Right Action Switchers */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Science Outreach Button */}
+          {/* Mobile Menu Toggle */}
           <button
-            onClick={() => setIsStoryModalOpen(true)}
-            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#142D47] hover:bg-[#1A3A5C] text-[#38BDF8] border border-[#224A75] text-[11px] sm:text-xs font-medium transition-all shadow-sm"
-            title="Open Science Communication Stories"
+            onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+            className="lg:hidden p-2 rounded-xl bg-[#0E2034] text-[#7C98B3] hover:text-white border border-[#172E47]"
           >
-            <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#38BDF8]" />
-            <span className="hidden xs:inline">Outreach</span>
-          </button>
-
-          {/* NetCDF Ingest Button */}
-          <button
-            onClick={() => setIsIngestModalOpen(true)}
-            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#0284C7] hover:bg-[#0369A1] text-white text-[11px] sm:text-xs font-medium transition-all shadow-sm"
-            title="Import NetCDF Data"
-          >
-            <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline">NetCDF</span>
+            {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </header>
 
-      {/* =========================================================================
-          MAIN WORKSPACE (Sidebar Drawer + Viewport Stage)
-          ========================================================================= */}
-      <div className="flex flex-1 min-h-0 relative">
-        {/* Mobile Backdrop Overlay */}
-        {isMobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-150"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-        )}
-
-        {/* Left Sidebar Controls (Drawer on Mobile, Static on Desktop) */}
-        <aside
-          className={`${
-            isMobileMenuOpen
-              ? "fixed inset-y-0 left-0 z-50 w-72 sm:w-80 shadow-2xl flex"
-              : "hidden"
-          } lg:flex lg:static w-72 sm:w-80 shrink-0 border-r border-[#172E47] bg-[#0A1726] p-3.5 sm:p-4 flex-col gap-4 sm:gap-5 overflow-y-auto`}
-        >
-          {/* Mobile Drawer Header */}
-          <div className="flex lg:hidden items-center justify-between pb-2 border-b border-[#162D45]">
-            <span className="text-xs font-bold text-white uppercase tracking-wider">
-              Ocean Controls
-            </span>
-            <button
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="p-1 rounded text-[#7C98B3] hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      {/* Mobile Nav Dropdown */}
+      {isMobileNavOpen && (
+        <div className="lg:hidden bg-[#0A1828] border-b border-[#172E47] p-3 flex flex-col gap-2 z-40 animate-in fade-in duration-150">
+          <div className="flex flex-col gap-1">
+            {NAV_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setIsMobileNavOpen(false);
+                  }}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-left transition-all ${
+                    active
+                      ? "bg-[#0284C7] text-white font-semibold"
+                      : "text-[#7C98B3] hover:bg-[#0E2034] hover:text-white"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Variable Selector */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-[#8EA7BF] uppercase tracking-wider">
-                State Variable
-              </span>
-              <span className="text-[10px] text-[#38BDF8] font-mono">
-                {activeVar.unit}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-1">
-              {OCEAN_VARIABLES.map((v) => {
-                const Icon = v.icon;
-                const active = v.id === variable;
+          {/* Mobile Mission Presets Grid */}
+          <div className="pt-2 border-t border-[#172E47]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#6E8FA9] px-1 block mb-1.5">
+              Mission Profile Presets
+            </span>
+            <div className="grid grid-cols-2 gap-1.5">
+              {MISSION_PROFILES.map((p) => {
+                const PIcon = p.icon;
+                const isCurrent = p.id === activeMissionId;
                 return (
                   <button
-                    key={v.id}
+                    key={p.id}
                     onClick={() => {
-                      setVariable(v.id);
-                      setIsMobileMenuOpen(false);
+                      handleSelectMission(p.id);
+                      setIsMobileNavOpen(false);
                     }}
-                    className={`flex items-center justify-between px-2.5 py-1.5 sm:py-2 rounded-xl text-left transition-all ${
-                      active
-                        ? "bg-[#132B44] text-[#E2EDF8] border border-[#23507D] shadow-[0_0_15px_rgba(2,132,199,0.15)]"
-                        : "text-[#8DA6BE] hover:bg-[#0E2033] hover:text-[#DCE8F0] border border-transparent"
+                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-xl text-[11px] font-medium transition-all ${
+                      isCurrent
+                        ? "bg-[#0284C7] text-white font-semibold"
+                        : "bg-[#0E2034] text-[#7C98B3] hover:text-white"
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="p-1 sm:p-1.5 rounded-lg shrink-0"
-                        style={{
-                          backgroundColor: active ? `${v.color}25` : "#122538",
-                          color: active ? v.color : "#7C98B3",
-                        }}
-                      >
-                        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold leading-tight">{v.label}</p>
-                        <p className="text-[9px] sm:text-[10px] text-[#63829F] mt-0.5">{v.desc}</p>
-                      </div>
-                    </div>
-                    <span className="text-[9px] sm:text-[10px] font-mono opacity-80 px-1 py-0.2 rounded bg-[#0A1624]">
-                      {v.unit}
-                    </span>
+                    <PIcon className="w-3.5 h-3.5 shrink-0" style={{ color: p.color }} />
+                    <span className="truncate">{p.shortLabel}</span>
                   </button>
                 );
               })}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Depth Navigation */}
-          <div className="p-2.5 sm:p-3 rounded-xl bg-[#071321] border border-[#142A42] space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold text-[#8EA7BF] uppercase tracking-wider block">
-                  Depth Slice
-                </span>
-                <span className={`text-[9px] sm:text-[10px] font-medium ${depthZone.color}`}>
-                  {depthZone.badge}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={0}
-                  max={2000}
-                  step={10}
-                  value={depth}
-                  onChange={(e) => setDepth(Number(e.target.value))}
-                  className="w-14 bg-[#0E2236] border border-[#1A3757] rounded px-1 py-0.5 text-xs text-[#38BDF8] font-mono text-right focus:outline-none"
-                />
-                <span className="text-xs font-mono text-[#6E8FA9]">m</span>
-              </div>
-            </div>
-
-            <input
-              type="range"
-              min={0}
-              max={2000}
-              step={10}
-              value={depth}
-              onChange={(e) => setDepth(Number(e.target.value))}
-              className="w-full accent-[#38BDF8] h-1.5 bg-[#142A42] rounded-lg cursor-pointer"
+      {/* =========================================================================
+          TAB CONTENT VIEWS
+          ========================================================================= */}
+      <div className="flex-1 flex overflow-hidden">
+        <ErrorBoundary key={activeTab}>
+          {activeTab === "home" && (
+            <HomeView
+              onNavigate={(tab) => setActiveTab(tab)}
+              onSelectMission={handleSelectMission}
             />
+          )}
 
-            <div className="grid grid-cols-4 gap-1 text-[9px] sm:text-[10px] font-mono pt-0.5">
-              {[
-                { label: "0m", val: 0 },
-                { label: "50m", val: 50 },
-                { label: "200m", val: 200 },
-                { label: "1000m", val: 1000 },
-              ].map((p) => (
-                <button
-                  key={p.val}
-                  onClick={() => setDepth(p.val)}
-                  className={`py-0.5 rounded border text-center transition-colors ${
-                    depth === p.val
-                      ? "bg-[#16385B] text-[#38BDF8] border-[#255685]"
-                      : "bg-[#0A1828] text-[#7C98B3] border-[#132A42] hover:text-white"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Geospatial Layers */}
-          <div>
-            <span className="text-xs font-semibold text-[#8EA7BF] uppercase tracking-wider block mb-1.5">
-              Geospatial Layers
-            </span>
-            <div className="space-y-1">
-              {[
-                { key: "eez", label: "Indian EEZ (200nm)" },
-                { key: "bathymetry", label: "Bathymetry & Ridges" },
-                { key: "currents", label: "Current Streamlines" },
-                { key: "floats", label: "Argo & Glider Beacons" },
-              ].map((item) => (
-                <label
-                  key={item.key}
-                  className="flex items-center justify-between p-2 rounded-lg bg-[#0E1F33] hover:bg-[#12273F] border border-[#162F4A] cursor-pointer text-xs transition-colors"
-                >
-                  <span className="text-[#DCE8F0] font-medium">{item.label}</span>
-                  <input
-                    type="checkbox"
-                    checked={layers[item.key]}
-                    onChange={() => handleLayerToggle(item.key)}
-                    className="accent-[#38BDF8] w-3.5 h-3.5 rounded cursor-pointer"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Vertical Exaggeration Slider */}
-          <div className="p-2.5 sm:p-3 rounded-xl bg-[#071321] border border-[#142A42] space-y-1">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-[#8EA7BF] font-medium">Vertical Exaggeration</span>
-              <span className="text-[#38BDF8] font-mono">{verticalExaggeration}x</span>
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              step={0.5}
-              value={verticalExaggeration}
-              onChange={(e) => setVerticalExaggeration(Number(e.target.value))}
-              className="w-full accent-[#38BDF8] h-1.5 bg-[#142A42] rounded-lg cursor-pointer"
+          {activeTab === "visualizer" && (
+            <VisualizerView
+              variable={variable}
+              setVariable={setVariable}
+              depth={depth}
+              setDepth={setDepth}
+              timeStep={timeStep}
+              setTimeStep={setTimeStep}
+              layers={layers}
+              handleLayerToggle={handleLayerToggle}
+              onSelectInstrument={(inst) => setSelectedInstrument(inst)}
+              activeMission={activeMission}
+              onSelectMission={handleSelectMission}
             />
-          </div>
+          )}
 
-          {/* Quick Inspection Button */}
-          <button
-            onClick={() => {
-              setSelectedInstrument(INSTRUMENTS[0]);
-              setIsMobileMenuOpen(false);
-            }}
-            className="w-full py-2 sm:py-2.5 rounded-xl bg-[#132E4A] hover:bg-[#1A3D63] text-[#7FDDF0] border border-[#22507A] text-xs font-semibold tracking-wide flex items-center justify-center gap-1.5 transition-all shadow-md mt-auto"
-          >
-            <Radio className="w-3.5 h-3.5 text-[#34D399] animate-pulse" />
-            Inspect Float vs Model →
-          </button>
-        </aside>
+          {activeTab === "analytics" && <FloatAnalyticsView />}
 
-        {/* Center Viewport Stage */}
-        <main className="flex-1 flex relative overflow-hidden">
-          <ViewportStage
-            variable={variable}
-            depth={depth}
-            timeStep={timeStep}
-            layers={layers}
-            onSelectInstrument={(inst) => setSelectedInstrument(inst)}
-            colorbarComponent={
-              <ColorbarEditor
-                variableLabel={activeVar.label}
-                unit={activeVar.unit}
-                defaultMin={activeVar.defaultMin}
-                defaultMax={activeVar.defaultMax}
-              />
-            }
-            timelineComponent={
-              <TimelinePlayer
-                currentTimeStep={timeStep}
-                onChangeTimeStep={setTimeStep}
-                maxSteps={7}
-              />
-            }
-          />
-        </main>
+          {activeTab === "assistant" && <OceanAIAssistant />}
+
+          {activeTab === "uploads" && <NetCDFUploadView />}
+
+          {activeTab === "glossary" && <GlossaryOutreachView />}
+        </ErrorBoundary>
       </div>
 
-      {/* Modals */}
+      {/* Instrument Inspector Modal (Can open when clicking a beacon in 3D view) */}
       <InstrumentInspector
         instrument={selectedInstrument}
         onClose={() => setSelectedInstrument(null)}
-      />
-
-      <OutreachStoryModal
-        isOpen={isStoryModalOpen}
-        onClose={() => setIsStoryModalOpen(false)}
-        onApplyStorySetting={handleApplyStorySetting}
-      />
-
-      <NetCDFIngestModal
-        isOpen={isIngestModalOpen}
-        onClose={() => setIsIngestModalOpen(false)}
-        onDatasetLoaded={(ds) => {
-          alert(`Dataset "${ds.name}" successfully loaded into 3D stage!`);
-        }}
       />
     </div>
   );

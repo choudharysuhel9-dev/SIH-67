@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Compass,
   Layers,
@@ -9,7 +9,10 @@ import {
   ChevronUp,
   ChevronDown,
   SlidersHorizontal,
-  Clock
+  Clock,
+  Maximize2,
+  Minimize2,
+  Sparkles
 } from "lucide-react";
 
 // Real Indian Ocean In-situ Observation Platforms
@@ -104,7 +107,19 @@ export default function ViewportStage({
   const [cursorCoords, setCursorCoords] = useState({ lat: "14.28° N", lon: "68.42° E" });
   const [showLegendMobile, setShowLegendMobile] = useState(false);
   const [mobileActiveBottomTab, setMobileActiveBottomTab] = useState("timeline"); // timeline | colorbar | hide
+  const [isSpaceTheatreMode, setIsSpaceTheatreMode] = useState(false);
   const containerRef = useRef(null);
+
+  // Press ESC to exit Space Mode
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "Escape") {
+        setIsSpaceTheatreMode(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Mouse coordinate calculation across Indian Ocean viewport
   function handleMouseMove(e) {
@@ -125,8 +140,23 @@ export default function ViewportStage({
     <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="relative flex-1 w-full h-full overflow-hidden select-none bg-[radial-gradient(ellipse_at_top,_#0E263D_0%,_#071321_60%,_#040A12_100%)] flex flex-col justify-between"
+      className={
+        isSpaceTheatreMode
+          ? "fixed inset-0 z-50 w-screen h-screen overflow-hidden select-none bg-black bg-[radial-gradient(ellipse_at_center,_#040914_0%,_#000000_100%)] flex flex-col justify-between animate-in fade-in duration-300"
+          : "relative flex-1 w-full h-full overflow-hidden select-none bg-[radial-gradient(ellipse_at_top,_#0E263D_0%,_#071321_60%,_#040A12_100%)] flex flex-col justify-between"
+      }
     >
+      {/* Cosmos Stars Background in Space Mode */}
+      {isSpaceTheatreMode && (
+        <div className="absolute inset-0 pointer-events-none opacity-60">
+          <div className="absolute top-[10%] left-[15%] w-1 h-1 bg-white rounded-full animate-pulse" />
+          <div className="absolute top-[25%] left-[80%] w-1.5 h-1.5 bg-blue-200 rounded-full animate-ping opacity-40" />
+          <div className="absolute top-[70%] left-[20%] w-1 h-1 bg-white rounded-full opacity-60" />
+          <div className="absolute top-[45%] left-[90%] w-1 h-1 bg-cyan-200 rounded-full animate-pulse" />
+          <div className="absolute top-[85%] left-[75%] w-1.5 h-1.5 bg-white rounded-full opacity-50" />
+          <div className="absolute top-[15%] left-[60%] w-0.5 h-0.5 bg-white rounded-full opacity-70" />
+        </div>
+      )}
       {/* =========================================================================
           DROP-IN MOUNT POINT FOR 3D TEAMMATE (Three.js / Cesium.js Canvas)
           ========================================================================= */}
@@ -215,7 +245,7 @@ export default function ViewportStage({
       </div>
 
       {/* =========================================================================
-          TOP HUD OVERLAYS (Adaptive for Mobile & Desktop)
+          TOP HUD OVERLAYS (Adaptive for Mobile & Desktop + Space Mode Enlarge)
           ========================================================================= */}
       <div className="relative z-10 flex items-start justify-between p-2.5 sm:p-4 pointer-events-none gap-2">
         {/* Region & Telemetry Info (Responsive Compact) */}
@@ -236,17 +266,50 @@ export default function ViewportStage({
           </div>
         </div>
 
-        {/* Float Status Legend (Collapsible on Mobile) */}
-        <div className="pointer-events-auto flex flex-col items-end">
-          {/* Mobile Toggle Button */}
+        {/* Center Space Mode Indicator Banner (when enlarged) */}
+        {isSpaceTheatreMode && (
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-[#38BDF8]/40 shadow-[0_0_20px_rgba(56,189,248,0.3)] text-xs text-white pointer-events-auto animate-in fade-in zoom-in-95">
+            <Sparkles className="w-3.5 h-3.5 text-[#38BDF8] animate-pulse" />
+            <span className="font-semibold text-[#38BDF8]">Space Orbit Theatre View</span>
+            <span className="text-[#7C98B3] text-[11px]">• Press ESC to exit</span>
+          </div>
+        )}
+
+        {/* Top Right: Space Mode Toggle & Float Status Legend */}
+        <div className="pointer-events-auto flex items-start gap-2">
+          {/* Space Mode Enlarge / Shrink Toggle Button */}
           <button
-            onClick={() => setShowLegendMobile(!showLegendMobile)}
-            className="sm:hidden flex items-center gap-1 px-2 py-1 rounded-lg bg-[#091524]/90 border border-[#1B3552] text-[10px] text-[#7C98B3] hover:text-white shadow-md"
+            onClick={() => setIsSpaceTheatreMode(!isSpaceTheatreMode)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl backdrop-blur-md border text-xs shadow-xl transition-all ${
+              isSpaceTheatreMode
+                ? "bg-[#091524]/90 border-[#F59E0B] text-[#F59E0B] hover:bg-[#152336]"
+                : "bg-[#091524]/90 border-[#1B3552] hover:border-[#38BDF8] text-white hover:bg-[#122538]"
+            }`}
+            title={isSpaceTheatreMode ? "Exit Space Mode (ESC)" : "Enlarge 3D Globe to Deep Space View"}
           >
-            <Info className="w-3 h-3 text-[#38BDF8]" />
-            <span>Legend</span>
-            {showLegendMobile ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {isSpaceTheatreMode ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5 text-[#F59E0B]" />
+                <span className="hidden sm:inline">Exit Space View</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5 text-[#38BDF8]" />
+                <span className="hidden sm:inline">Enlarge Globe (Space Mode)</span>
+              </>
+            )}
           </button>
+
+          {/* Float Status Legend (Collapsible on Mobile) */}
+          <div className="flex flex-col items-end">
+            <button
+              onClick={() => setShowLegendMobile(!showLegendMobile)}
+              className="sm:hidden flex items-center gap-1 px-2 py-1.5 rounded-xl bg-[#091524]/90 border border-[#1B3552] text-[10px] text-[#7C98B3] hover:text-white shadow-md"
+            >
+              <Info className="w-3 h-3 text-[#38BDF8]" />
+              <span>Legend</span>
+              {showLegendMobile ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
 
           {/* Desktop Legend & Mobile Expanded View */}
           <div
@@ -278,6 +341,7 @@ export default function ViewportStage({
           </div>
         </div>
       </div>
+    </div>
 
       {/* =========================================================================
           INTERACTIVE IN-SITU BEACON PINS (Large Finger-Friendly Hit Targets)
