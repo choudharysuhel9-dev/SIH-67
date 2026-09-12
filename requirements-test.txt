@@ -1,0 +1,12 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+xarray==2024.11.0
+netCDF4==1.7.2
+numpy==2.2.1
+pandas==2.2.3
+python-dotenv==1.0.1
+
+# Testing (Task 3)
+pytest==8.3.4
+httpx==0.28.1
