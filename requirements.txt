@@ -1,0 +1,18 @@
+# Member 5 — Ocean Data Optimization Layer
+# Minimal production dependencies.
+# Pin major versions only; exact versions pinned in requirements-lock.txt.
+
+# Core scientific stack
+numpy>=1.26
+xarray>=2024.1
+dask[array]>=2024.1
+scipy>=1.13           # Required by xarray for some interpolation utilities
+netCDF4>=1.6          # NetCDF file support for xarray
+
+# API server
+fastapi>=0.100
+uvicorn[standard]>=0.29
+
+# Testing (development only)
+pytest>=8.0
+pytest-cov>=4.1
