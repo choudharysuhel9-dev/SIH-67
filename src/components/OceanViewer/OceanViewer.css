@@ -1,0 +1,56 @@
+.ocean-viewer {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg);
+}
+
+.ocean-viewer__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ocean-viewer__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: 0.3px;
+}
+
+.ocean-viewer__region {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.3px;
+}
+
+/* Stage must have an explicit, non-zero size for Cesium to size its
+   canvas against. flex: 1 + min-height: 0 lets it fill the remaining
+   space of the column layout without collapsing to 0px. */
+.ocean-viewer__stage {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+
+/* Cesium's Viewer widget mounts its canvas + built-in UI chrome
+   (credits, navigation controls) inside this element. It is
+   absolutely positioned to fill the stage exactly, so it can never
+   render squeezed, tiny, or at 0px height regardless of surrounding
+   flex/grid sizing. */
+.cesium-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Without this, some browsers/trackpads treat wheel and gesture
+     input over the canvas as page scroll/zoom candidates before
+     Cesium's own screen-space camera controller gets to handle them,
+     which shows up as inconsistent or "stuck" mouse-wheel zoom. */
+  touch-action: none;
+}
