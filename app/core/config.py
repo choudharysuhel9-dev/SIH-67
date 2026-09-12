@@ -21,8 +21,8 @@ API_DESCRIPTION = (
 )
 
 # Comma-separated list of allowed frontend origins for CORS.
-# Defaults cover the typical Vite (5173) and CRA (3000) dev servers.
-_default_origins = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
+# Defaults cover the typical Vite (5173, 5174, 5175) and CRA (3000) dev servers.
+_default_origins = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:3000,http://127.0.0.1:3000"
 CORS_ORIGINS = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", _default_origins).split(",")

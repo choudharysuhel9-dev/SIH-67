@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { checkBackendHealth } from "./services/oceanApi";
 import {
   Thermometer,
   Droplets,
@@ -143,6 +144,23 @@ export default function App() {
 
   const [selectedInstrument, setSelectedInstrument] = useState(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function verifyHealth() {
+      const res = await checkBackendHealth();
+      if (isMounted) {
+        setBackendOnline(res.online);
+      }
+    }
+    verifyHealth();
+    const interval = setInterval(verifyHealth, 6000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const activeMission =
     MISSION_PROFILES.find((m) => m.id === activeMissionId) || MISSION_PROFILES[0];
@@ -332,9 +350,20 @@ export default function App() {
             )}
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-xs font-mono bg-[#071321] px-3 py-1.5 rounded-xl border border-[#142A42]">
-            <span className="w-2 h-2 rounded-full bg-[#34D399] animate-pulse" />
-            <span className="text-[#34D399]">System Online</span>
+          <div
+            className="hidden sm:flex items-center gap-2 text-xs font-mono bg-[#071321] px-3 py-1.5 rounded-xl border border-[#142A42] transition-colors"
+            title={backendOnline ? "FastAPI Backend is active at http://localhost:8000" : "FastAPI Backend is standby (Running with local fallback)"}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                backendOnline
+                  ? "bg-[#34D399] animate-pulse shadow-[0_0_8px_#34D399]"
+                  : "bg-[#38BDF8]"
+              }`}
+            />
+            <span className={backendOnline ? "text-[#34D399] font-medium" : "text-[#7C98B3]"}>
+              {backendOnline ? "FastAPI Live" : "System Ready"}
+            </span>
           </div>
 
           {/* Mobile Menu Toggle */}

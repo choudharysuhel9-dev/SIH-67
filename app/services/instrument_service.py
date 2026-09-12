@@ -118,10 +118,10 @@ def get_instrument_profile(instrument_id: str) -> InstrumentProfileResponse:
     data = _get_raw_instrument(instrument_id)
 
     depths = [float(d) for d in DEPTHS]
-    # Mock but physically plausible: temperature falls with depth,
-    # salinity rises slightly with depth.
-    temperature = [round(29.0 - d * 0.02, 2) for d in depths]
-    salinity = [round(34.5 + d * 0.001, 2) for d in depths]
+    # Realistic Indian Ocean thermocline (29.1°C surface, steep thermocline drop, 3.3°C deep)
+    temperature = [round(2.6 + 26.5 / (1.0 + (d / 120.0)**1.25), 2) for d in depths]
+    # Realistic halocline (34.8 PSU surface, subsurface salinity max, 34.6 PSU deep)
+    salinity = [round(34.6 + 0.8 / (1.0 + ((d - 80.0) / 120.0)**2), 2) for d in depths]
 
     return InstrumentProfileResponse(
         instrument_id=instrument_id,

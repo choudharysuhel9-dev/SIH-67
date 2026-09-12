@@ -20,8 +20,8 @@ SUPPORTED_VARIABLES = {
     "current_v": {"name": "Northward Current (V)", "unit": "m/s"},
 }
 
-# Mock depth levels in meters (matches the plan's example: 0..1000m)
-DEPTHS = [0, 10, 20, 50, 75, 90]
+# Standard ocean depth levels in meters (Argo float 0..2000m column)
+DEPTHS = [0, 10, 25, 50, 100, 150, 250, 500, 750, 1000, 1500, 2000]
 # Datasets exposed by the platform
 DATASETS = [
     {
