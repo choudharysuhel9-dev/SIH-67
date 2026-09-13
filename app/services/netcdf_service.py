@@ -301,11 +301,17 @@ def get_model_data(
             row = []
             for lon in lons:
                 if variable == "temperature":
-                    base = 28.5 - 0.012 * depth + 0.5 * math.sin(lat * 0.2 + lon * 0.1)
-                    val = max(2.5, min(32.0, base))
+                    # Realistic Indian Ocean ROMS model thermocline with physical curve + minor model variance
+                    depth_val = float(depth)
+                    base = 2.6 + 26.5 / (1.0 + (depth_val / 120.0)**1.25)
+                    model_bias = 0.20 * (1.0 - depth_val / 3000.0) + 0.05 * math.sin(lat * 0.3 + lon * 0.2)
+                    val = max(2.0, min(32.0, base + model_bias))
                 elif variable == "salinity":
-                    base = 35.0 + 0.3 * math.cos(lat * 0.15) - 0.0005 * depth
-                    val = max(30.0, min(37.0, base))
+                    # Realistic halocline with physical subsurface salinity maximum
+                    depth_val = float(depth)
+                    base = 34.6 + 0.8 / (1.0 + ((depth_val - 80.0) / 120.0)**2)
+                    model_bias = 0.08 * (1.0 - depth_val / 3000.0) + 0.03 * math.cos(lat * 0.25 + lon * 0.15)
+                    val = max(30.0, min(37.0, base + model_bias))
                 elif variable == "current_u":
                     val = round(0.35 * math.sin(lat + lon), 3)
                 elif variable == "current_v":
