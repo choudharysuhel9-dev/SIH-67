@@ -22,6 +22,7 @@ data/*.txt
 # OS
 .DS_Store
 Thumbs.db
+*.zip
 
 # Testing / coverage
 .pytest_cache/
